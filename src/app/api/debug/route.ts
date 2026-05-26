@@ -4,13 +4,17 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   const checks: Record<string, any> = {};
 
-  checks.hasDatabaseUrl = !!process.env.DATABASE_URL;
-  checks.hasAuthSecret = !!process.env.AUTH_SECRET;
-  checks.nodeEnv = process.env.NODE_ENV;
-  checks.vercelEnv = process.env.VERCEL_ENV || "local";
+  checks.env = {
+    DATABASE_URL: !!process.env.DATABASE_URL,
+    POSTGRES_PRISMA_URL: !!process.env.POSTGRES_PRISMA_URL,
+    POSTGRES_URL: !!process.env.POSTGRES_URL,
+    AUTH_SECRET: !!process.env.AUTH_SECRET,
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV || "local",
+  };
 
   try {
-    const result = await prisma.$queryRaw`SELECT current_database() as db`;
+    const result = await prisma.$queryRaw`SELECT current_database() as db, version() as ver`;
     checks.dbConnection = "ok";
     checks.dbInfo = result;
   } catch (err: any) {
