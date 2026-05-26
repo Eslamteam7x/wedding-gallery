@@ -1,0 +1,11 @@
+
+> wedding-gallery@2.0.0 dev
+> next dev
+
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3001
+   - Network:      http://169.254.10.206:3001
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 6.1s

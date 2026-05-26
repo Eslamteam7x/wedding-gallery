@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -34,12 +34,16 @@ export default function Header() {
         </a>
 
         <div className="hidden md:flex items-center gap-6">
-          <a href="/#gallery" className="text-sm text-white/60 hover:text-white transition-colors tracking-wide">
-            Gallery
-          </a>
-          <a href="/#upload" className="text-sm text-white/60 hover:text-white transition-colors tracking-wide">
-            Upload
-          </a>
+          {session && (
+            <>
+              <a href="/#gallery" className="text-sm text-white/60 hover:text-white transition-colors tracking-wide">
+                Gallery
+              </a>
+              <a href="/#upload" className="text-sm text-white/60 hover:text-white transition-colors tracking-wide">
+                Upload
+              </a>
+            </>
+          )}
 
           {session ? (
             <>
@@ -60,12 +64,12 @@ export default function Header() {
               </button>
             </>
           ) : (
-            <button
-              onClick={() => signIn()}
+            <a
+              href="/login"
               className="text-sm text-white/60 hover:text-white transition-colors tracking-wide"
             >
               Sign In
-            </button>
+            </a>
           )}
         </div>
 

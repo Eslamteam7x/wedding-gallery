@@ -25,6 +25,7 @@ declare module "@auth/core/jwt" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       name: "credentials",
@@ -39,9 +40,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: credentials.email as string },
         });
 
-        if (!user || !(await compare(credentials.password as string, user.password))) {
-          return null;
-        }
+        if (!user) return null;
+
+        const valid = await compare(credentials.password as string, user.password);
+        if (!valid) return null;
 
         return {
           id: user.id,
@@ -70,6 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   session: {
     strategy: "jwt",

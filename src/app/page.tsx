@@ -13,6 +13,7 @@ interface GalleryImage {
   id: string;
   url: string;
   name: string;
+  groupId: string;
 }
 
 interface Group {
@@ -37,7 +38,12 @@ export default function Home() {
     try {
       const res = await fetch("/api/photos");
       const data = await res.json();
-      setImages(data.map((p: any) => ({ id: p.id, url: p.url, name: p.name })));
+      setImages(data.map((p: any) => ({
+        id: p.id,
+        url: p.url,
+        name: p.name,
+        groupId: p.groupId,
+      })));
     } catch {} finally {
       setLoading(false);
     }
@@ -46,8 +52,7 @@ export default function Home() {
   const fetchGroups = useCallback(async () => {
     try {
       const res = await fetch("/api/groups");
-      const data = await res.json();
-      setGroups(data);
+      setGroups(await res.json());
     } catch {}
   }, []);
 
@@ -60,7 +65,7 @@ export default function Home() {
     }
   }, [status, fetchImages, fetchGroups]);
 
-  const handleImagesUpload = useCallback((files: File[]) => {
+  const handleImagesUpload = useCallback(() => {
     fetchImages();
   }, [fetchImages]);
 
@@ -76,10 +81,7 @@ export default function Home() {
   }, []);
 
   const filteredImages = currentGroupId
-    ? images.filter((img) => {
-        // We need to match photo to group - store groupId in photo
-        return true; // Simplified: API already filters by permissions
-      })
+    ? images.filter((img) => img.groupId === currentGroupId)
     : images;
 
   if (status === "loading" || loading) {
