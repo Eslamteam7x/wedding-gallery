@@ -28,14 +28,16 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setError(result.error === "CredentialsSignin"
-          ? "Invalid email or password"
-          : `Error: ${result.error}`);
-      } else if (result?.ok) {
+        if (result.error === "CredentialsSignin") {
+          setError("Invalid email or password");
+        } else {
+          setError(`Server: ${result.error}`);
+        }
+      } else if (result?.url || result?.ok) {
         router.push(callbackUrl);
         router.refresh();
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(`Unexpected response: ${JSON.stringify(result)}`);
       }
     } catch (err: any) {
       setError(err?.message || "Connection error. Is the server running?");
