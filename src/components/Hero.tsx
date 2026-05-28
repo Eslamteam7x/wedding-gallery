@@ -49,9 +49,9 @@ export default function Hero() {
           transition={{ delay: 0.4, duration: 0.8 }}
           className="text-5xl md:text-7xl lg:text-8xl font-serif text-white mb-6 leading-tight"
         >
-          <span className="block">نورة</span>
-          <span className="block text-gold text-3xl md:text-4xl lg:text-5xl my-3">&amp;</span>
-          <span className="block">أحمد</span>
+<span className="block">إسلام</span>
+<span className="block text-gold text-3xl md:text-4xl lg:text-5xl my-3">&amp;</span>
+<span className="block">إسراء</span>
         </motion.h1>
 
         <motion.div
