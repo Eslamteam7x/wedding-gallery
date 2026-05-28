@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -15,33 +15,29 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "CredentialsSignin") {
+      setError("Invalid email or password");
+    } else if (err) {
+      setError(`Login failed: ${err}`);
+    }
+  }, [searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        redirect: true,
+        callbackUrl,
       });
-
-      if (result?.error) {
-        if (result.error === "CredentialsSignin") {
-          setError("Invalid email or password");
-        } else {
-          setError(`Server: ${result.error}`);
-        }
-      } else if (result?.url || result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
-      } else {
-        setError(`Unexpected response: ${JSON.stringify(result)}`);
-      }
     } catch (err: any) {
-      setError(err?.message || "Connection error. Is the server running?");
-    } finally {
+      setError(err?.message || "Connection error");
       setLoading(false);
     }
   };
