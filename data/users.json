@@ -1,0 +1,10 @@
+[
+  {
+    "id": "seed-admin-001",
+    "name": "Admin",
+    "email": "admin@wedding.com",
+    "password": "$2a$12$cAyqtOYlzJ24XmEpDmyT2uuAFUzPKFzne9P41sFBQVGeAtTmX0lDO",
+    "role": "ADMIN",
+    "createdAt": "2026-05-28T08:00:00.000Z"
+  }
+]

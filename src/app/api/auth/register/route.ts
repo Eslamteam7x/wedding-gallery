@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { readJSON, writeJSON, PATHS } from "@/lib/github-storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,22 +14,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const users = await readJSON<any[]>(PATHS.USERS);
+    const existing = users.find((u) => u.email === email);
     if (existing) {
       return NextResponse.json({ error: "Email already in use" }, { status: 409 });
     }
 
-    const user = await prisma.user.create({
-      data: {
-        name: name?.trim() || null,
-        email: email.trim(),
-        password: await hash(password, 12),
-        role: "USER",
-      },
-      select: { id: true, name: true, email: true, role: true },
-    });
+    const user = {
+      id: crypto.randomUUID(),
+      name: name?.trim() || null,
+      email: email.trim(),
+      password: await hash(password, 12),
+      role: "USER",
+      createdAt: new Date().toISOString(),
+    };
 
-    return NextResponse.json(user, { status: 201 });
+    users.push(user);
+    await writeJSON(PATHS.USERS, users);
+
+    return NextResponse.json(
+      { id: user.id, name: user.name, email: user.email, role: user.role },
+      { status: 201 }
+    );
   } catch {
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }

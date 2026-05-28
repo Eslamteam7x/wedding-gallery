@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { prisma } from "./prisma";
+import { readJSON, PATHS } from "./github-storage";
 
 declare module "next-auth" {
   interface User {
@@ -37,13 +37,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email as string },
-          });
+          const users = await readJSON<any[]>(PATHS.USERS);
+          const user = users.find(
+            (u: any) => u.email === credentials.email
+          );
 
           if (!user) return null;
 
-          const valid = await compare(credentials.password as string, user.password);
+          const valid = await compare(
+            credentials.password as string,
+            user.password
+          );
           if (!valid) return null;
 
           return {

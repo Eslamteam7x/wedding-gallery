@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { saveImage } from "@/lib/storage";
+import { readJSON, writeJSON, uploadImage, PATHS } from "@/lib/github-storage";
 
 export async function GET() {
   const session = await auth();
@@ -9,24 +8,39 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const photos = await prisma.photo.findMany({
-    where: {
-      group: {
-        OR: [
-          { isPublic: true },
-          { ownerId: session.user.id },
-          { members: { some: { userId: session.user.id } } },
-        ],
-      },
-    },
-    include: {
-      uploader: { select: { id: true, name: true } },
-      group: { select: { id: true, name: true } },
-    },
-    orderBy: { createdAt: "desc" },
+  const photos = await readJSON<any[]>(PATHS.PHOTOS);
+  const groups = await readJSON<any[]>(PATHS.GROUPS);
+  const members = await readJSON<any[]>(PATHS.GROUP_MEMBERS);
+  const users = await readJSON<any[]>(PATHS.USERS);
+
+  const visible = photos.filter((p) => {
+    const group = groups.find((g) => g.id === p.groupId);
+    if (!group) return false;
+    if (group.isPublic) return true;
+    if (group.ownerId === session.user.id) return true;
+    return members.some(
+      (m) => m.groupId === p.groupId && m.userId === session.user.id
+    );
   });
 
-  return NextResponse.json(photos);
+  const result = visible
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .map((p) => {
+      const uploader = users.find((u) => u.id === p.uploadedById);
+      const group = groups.find((g) => g.id === p.groupId);
+      return {
+        ...p,
+        uploader: uploader
+          ? { id: uploader.id, name: uploader.name }
+          : null,
+        group: group ? { id: group.id, name: group.name } : null,
+      };
+    });
+
+  return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {
@@ -40,7 +54,10 @@ export async function POST(req: NextRequest) {
   const groupId = formData.get("groupId") as string | null;
 
   if (!file || !groupId) {
-    return NextResponse.json({ error: "File and groupId are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "File and groupId are required" },
+      { status: 400 }
+    );
   }
 
   if (!file.type.startsWith("image/")) {
@@ -48,24 +65,36 @@ export async function POST(req: NextRequest) {
   }
 
   if (file.size > 10 * 1024 * 1024) {
-    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
+    return NextResponse.json(
+      { error: "File too large (max 10MB)" },
+      { status: 400 }
+    );
   }
 
-  const group = await prisma.group.findUnique({ where: { id: groupId } });
+  const groups = await readJSON<any[]>(PATHS.GROUPS);
+  const group = groups.find((g) => g.id === groupId);
   if (!group) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
-  const url = await saveImage(file);
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
 
-  const photo = await prisma.photo.create({
-    data: {
-      url,
-      name: file.name,
-      uploadedById: session.user.id,
-      groupId,
-    },
-  });
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  const url = await uploadImage(uniqueName, buffer);
+
+  const photos = await readJSON<any[]>(PATHS.PHOTOS);
+  const photo = {
+    id: crypto.randomUUID(),
+    url,
+    name: file.name,
+    uploadedById: session.user.id,
+    groupId,
+    createdAt: new Date().toISOString(),
+  };
+
+  photos.push(photo);
+  await writeJSON(PATHS.PHOTOS, photos);
 
   return NextResponse.json(photo, { status: 201 });
 }

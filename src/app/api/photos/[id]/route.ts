@@ -1,35 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { unlink } from "fs/promises";
-import { join } from "path";
+import { readJSON, writeJSON, deleteImage, PATHS } from "@/lib/github-storage";
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const photo = await prisma.photo.findUnique({
-    where: { id },
-    include: { group: true },
-  });
-
-  if (!photo) {
-    return NextResponse.json({ error: "Photo not found" }, { status: 404 });
   }
 
   if (session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
-  await prisma.photo.delete({ where: { id } });
+  const { id } = await params;
+  const photos = await readJSON<any[]>(PATHS.PHOTOS);
+  const idx = photos.findIndex((p) => p.id === id);
+
+  if (idx === -1) {
+    return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+  }
+
+  const photo = photos[idx];
 
   try {
-    const filePath = join(process.cwd(), "public", photo.url);
-    await unlink(filePath);
+    await deleteImage(photo.url);
   } catch {}
+
+  photos.splice(idx, 1);
+  await writeJSON(PATHS.PHOTOS, photos);
 
   return NextResponse.json({ success: true });
 }

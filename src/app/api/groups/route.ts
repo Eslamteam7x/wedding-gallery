@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { readJSON, writeJSON, PATHS } from "@/lib/github-storage";
 
 export async function GET() {
   const session = await auth();
@@ -8,22 +8,25 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const groups = await prisma.group.findMany({
-    where: {
-      OR: [
-        { isPublic: true },
-        { ownerId: session.user.id },
-        { members: { some: { userId: session.user.id } } },
-      ],
-    },
-    include: {
-      owner: { select: { id: true, name: true, email: true } },
-      _count: { select: { photos: true, members: true } },
-    },
-    orderBy: { createdAt: "desc" },
+  const groups = await readJSON<any[]>(PATHS.GROUPS);
+  const members = await readJSON<any[]>(PATHS.GROUP_MEMBERS);
+  const photos = await readJSON<any[]>(PATHS.PHOTOS);
+
+  const visible = groups.filter((g) => {
+    if (g.isPublic) return true;
+    if (g.ownerId === session.user.id) return true;
+    return members.some((m) => m.groupId === g.id && m.userId === session.user.id);
   });
 
-  return NextResponse.json(groups);
+  const result = visible.map((g) => ({
+    ...g,
+    _count: {
+      photos: photos.filter((p) => p.groupId === g.id).length,
+      members: members.filter((m) => m.groupId === g.id).length,
+    },
+  }));
+
+  return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {
@@ -38,14 +41,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const group = await prisma.group.create({
-    data: {
-      name: name.trim(),
-      description: description?.trim() || "",
-      isPublic: isPublic || false,
-      ownerId: session.user.id,
-    },
-  });
+  const groups = await readJSON<any[]>(PATHS.GROUPS);
+
+  const group = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    description: description?.trim() || "",
+    isPublic: isPublic || false,
+    ownerId: session.user.id,
+    createdAt: new Date().toISOString(),
+  };
+
+  groups.push(group);
+  await writeJSON(PATHS.GROUPS, groups);
 
   return NextResponse.json(group, { status: 201 });
 }

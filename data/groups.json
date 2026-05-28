@@ -1,0 +1,10 @@
+[
+  {
+    "id": "seed-group-001",
+    "name": "المعرض الرئيسي",
+    "description": "صور الفرح",
+    "isPublic": true,
+    "ownerId": "seed-admin-001",
+    "createdAt": "2026-05-28T08:00:00.000Z"
+  }
+]

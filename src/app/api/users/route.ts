@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { readJSON, writeJSON, PATHS } from "@/lib/github-storage";
 import { hash } from "bcryptjs";
 
 export async function GET() {
@@ -9,12 +9,16 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const users = await readJSON<any[]>(PATHS.USERS);
+  const safe = users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    createdAt: u.createdAt,
+  }));
 
-  return NextResponse.json(users);
+  return NextResponse.json(safe);
 }
 
 export async function POST(req: NextRequest) {
@@ -29,22 +33,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const users = await readJSON<any[]>(PATHS.USERS);
+  const existing = users.find((u) => u.email === email);
   if (existing) {
     return NextResponse.json({ error: "Email already in use" }, { status: 409 });
   }
 
-  const user = await prisma.user.create({
-    data: {
-      name: name?.trim() || null,
-      email: email.trim(),
-      password: await hash(password, 12),
-      role: role || "USER",
-    },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
-  });
+  const user = {
+    id: crypto.randomUUID(),
+    name: name?.trim() || null,
+    email: email.trim(),
+    password: await hash(password, 12),
+    role: role || "USER",
+    createdAt: new Date().toISOString(),
+  };
 
-  return NextResponse.json(user, { status: 201 });
+  users.push(user);
+  await writeJSON(PATHS.USERS, users);
+
+  return NextResponse.json(
+    { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt },
+    { status: 201 }
+  );
 }
 
 export async function PATCH(req: NextRequest) {
@@ -54,15 +64,22 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { id, name, role } = await req.json();
+  const users = await readJSON<any[]>(PATHS.USERS);
+  const idx = users.findIndex((u) => u.id === id);
+  if (idx === -1) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
 
-  const updated = await prisma.user.update({
-    where: { id },
-    data: {
-      ...(name !== undefined && { name: name.trim() || null }),
-      ...(role !== undefined && { role }),
-    },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  if (name !== undefined) users[idx].name = name.trim() || null;
+  if (role !== undefined) users[idx].role = role;
+
+  await writeJSON(PATHS.USERS, users);
+
+  return NextResponse.json({
+    id: users[idx].id,
+    name: users[idx].name,
+    email: users[idx].email,
+    role: users[idx].role,
+    createdAt: users[idx].createdAt,
   });
-
-  return NextResponse.json(updated);
 }
