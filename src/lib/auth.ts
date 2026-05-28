@@ -38,11 +38,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         try {
           const users = await readJSON<any[]>(PATHS.USERS);
+          if (!Array.isArray(users) || users.length === 0) {
+            console.error("No users found in GitHub storage");
+            return null;
+          }
+
           const user = users.find(
             (u: any) => u.email === credentials.email
           );
 
-          if (!user) return null;
+          if (!user) {
+            console.error("User not found:", credentials.email);
+            return null;
+          }
 
           const valid = await compare(
             credentials.password as string,

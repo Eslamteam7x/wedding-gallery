@@ -19,17 +19,22 @@ interface GitHubFile {
 }
 
 async function getFile(path: string): Promise<GitHubFile | null> {
-  const res = await fetch(
-    `${API}/repos/${GITHUB_OWNER()}/${GITHUB_REPO()}/contents/${path}?ref=${GITHUB_BRANCH()}`,
-    { headers: headers(), next: { revalidate: 0 } }
-  );
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-  const data = await res.json();
-  return {
-    sha: data.sha,
-    content: Buffer.from(data.content, "base64").toString("utf-8"),
-  };
+  try {
+    const res = await fetch(
+      `${API}/repos/${GITHUB_OWNER()}/${GITHUB_REPO()}/contents/${path}?ref=${GITHUB_BRANCH()}`,
+      { headers: headers(), next: { revalidate: 0 } }
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+    const data = await res.json();
+    return {
+      sha: data.sha,
+      content: Buffer.from(data.content, "base64").toString("utf-8"),
+    };
+  } catch (err) {
+    console.error("GitHub storage: getFile error", err);
+    return null;
+  }
 }
 
 async function putFile(path: string, content: string, sha?: string, message?: string) {
