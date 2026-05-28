@@ -94,7 +94,13 @@ export async function POST(req: NextRequest) {
   };
 
   photos.push(photo);
-  await writeJSON(PATHS.PHOTOS, photos);
+  const saved = await writeJSON(PATHS.PHOTOS, photos);
+  if (!saved) {
+    return NextResponse.json(
+      { error: "Failed to save to GitHub. Set GITHUB_TOKEN in Vercel env vars." },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json(photo, { status: 201 });
 }

@@ -53,7 +53,14 @@ export async function POST(req: NextRequest) {
   };
 
   groups.push(group);
-  await writeJSON(PATHS.GROUPS, groups);
+
+  const saved = await writeJSON(PATHS.GROUPS, groups);
+  if (!saved) {
+    return NextResponse.json(
+      { error: "Failed to save to GitHub. Set GITHUB_TOKEN in Vercel env vars." },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json(group, { status: 201 });
 }

@@ -26,6 +26,7 @@ export default function GroupManager({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   useEffect(() => {
     fetch("/api/groups")
@@ -36,6 +37,7 @@ export default function GroupManager({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreateError("");
     const res = await fetch("/api/groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -48,6 +50,9 @@ export default function GroupManager({
       setDescription("");
       setShowCreate(false);
       onSelectGroup(group);
+    } else {
+      const data = await res.json().catch(() => ({ error: "Request failed" }));
+      setCreateError(data.error || "Failed to create group");
     }
   };
 
@@ -75,6 +80,9 @@ export default function GroupManager({
 
       {showCreate && (
         <form onSubmit={handleCreate} className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+          {createError && (
+            <p className="text-red-400 text-xs bg-red-500/10 p-2 rounded">{createError}</p>
+          )}
           <input
             type="text"
             placeholder="Group name"

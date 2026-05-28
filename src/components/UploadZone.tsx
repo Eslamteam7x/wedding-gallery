@@ -60,6 +60,10 @@ export default function UploadZone({ groups, selectedGroupId }: UploadZoneProps)
           body: formData,
         });
         if (res.ok) uploaded++;
+        else if (uploaded === 0) {
+          const data = await res.json().catch(() => ({}));
+          setMessage(data.error || "Upload failed");
+        }
       } catch {}
     }
 

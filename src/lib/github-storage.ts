@@ -97,13 +97,19 @@ export async function readJSON<T = any>(path: string): Promise<T> {
   return (typeof [] as any) === "object" ? ([] as T) : ({} as T);
 }
 
-export async function writeJSON(path: string, data: any) {
+export async function writeJSON(path: string, data: any): Promise<boolean> {
   const serialized = JSON.stringify(data, null, 2);
-  const existing = await getFile(path);
-  if (existing) {
-    await putFile(path, serialized, existing?.sha);
-  } else {
-    await putFile(path, serialized);
+  try {
+    const existing = await getFile(path);
+    if (existing) {
+      await putFile(path, serialized, existing.sha);
+    } else {
+      await putFile(path, serialized);
+    }
+    return true;
+  } catch (err) {
+    console.error("GitHub storage: writeJSON error", err);
+    return false;
   }
 }
 
