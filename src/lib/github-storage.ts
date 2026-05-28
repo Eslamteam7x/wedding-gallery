@@ -1,3 +1,6 @@
+import { readFile } from "fs/promises";
+import { join } from "path";
+
 const GITHUB_TOKEN = () => process.env.GITHUB_TOKEN || "";
 const GITHUB_OWNER = () => process.env.GITHUB_OWNER || "Eslamteam7x";
 const GITHUB_REPO = () => process.env.GITHUB_REPO || "wedding-gallery";
@@ -71,32 +74,45 @@ async function deleteFile(path: string, sha: string, message?: string) {
   if (!res.ok) throw new Error(`GitHub API error (DELETE): ${res.status}`);
 }
 
+function localPath(path: string) {
+  return join(process.cwd(), path);
+}
+
+async function readLocalJSON<T>(path: string): Promise<T | null> {
+  try {
+    const content = await readFile(localPath(path), "utf-8");
+    return JSON.parse(content) as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function readJSON<T = any>(path: string): Promise<T> {
   const file = await getFile(path);
-  if (!file) return (typeof [] as any) === "object" ? ([] as T) : ({} as T);
-  return JSON.parse(file.content) as T;
+  if (file) return JSON.parse(file.content) as T;
+
+  const local = await readLocalJSON<T>(path);
+  if (local) return local;
+
+  return (typeof [] as any) === "object" ? ([] as T) : ({} as T);
 }
 
 export async function writeJSON(path: string, data: any) {
   const serialized = JSON.stringify(data, null, 2);
   const existing = await getFile(path);
-  await putFile(path, serialized, existing?.sha);
+  if (existing) {
+    await putFile(path, serialized, existing?.sha);
+  } else {
+    await putFile(path, serialized);
+  }
 }
 
 const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_OWNER()}/${GITHUB_REPO()}/${GITHUB_BRANCH()}`;
 
-export async function uploadImage(
-  filename: string,
-  buffer: Buffer
-): Promise<string> {
+export async function uploadImage(filename: string, buffer: Buffer): Promise<string> {
   const path = `uploads/${filename}`;
   const existing = await getFile(path);
-  await putFile(
-    path,
-    buffer.toString("base64"),
-    existing?.sha,
-    `Upload ${filename}`
-  );
+  await putFile(path, buffer.toString("base64"), existing?.sha, `Upload ${filename}`);
   return `${RAW_BASE}/${path}`;
 }
 
