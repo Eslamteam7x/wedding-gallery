@@ -20,13 +20,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "Photo not found" }, { status: 404 });
   }
 
-  const canDelete =
-    photo.uploadedById === session.user.id ||
-    photo.group.ownerId === session.user.id ||
-    session.user.role === "ADMIN";
-
-  if (!canDelete) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   await prisma.photo.delete({ where: { id } });

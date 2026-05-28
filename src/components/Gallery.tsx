@@ -13,9 +13,10 @@ interface GalleryImage {
 interface GalleryProps {
   images: GalleryImage[];
   onDeleteImage: (id: string) => void;
+  isAdmin?: boolean;
 }
 
-export default function Gallery({ images, onDeleteImage }: GalleryProps) {
+export default function Gallery({ images, onDeleteImage, isAdmin = false }: GalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   if (images.length === 0) {
@@ -93,18 +94,20 @@ export default function Gallery({ images, onDeleteImage }: GalleryProps) {
 
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-500" />
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteImage(image.id);
-                    }}
-                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 p-2 rounded-full bg-black/50 hover:bg-red-500/80 text-white scale-90 group-hover:scale-100"
-                    aria-label="Delete image"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteImage(image.id);
+                      }}
+                      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 p-2 rounded-full bg-black/50 hover:bg-red-500/80 text-white scale-90 group-hover:scale-100"
+                      aria-label="Delete image"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
 
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500">
                     <div className="p-3 rounded-full bg-white/10 backdrop-blur-sm translate-y-4 group-hover:translate-y-0 transition-transform duration-500">

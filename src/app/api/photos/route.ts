@@ -31,8 +31,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
 
   const formData = await req.formData();
@@ -54,15 +54,6 @@ export async function POST(req: NextRequest) {
   const group = await prisma.group.findUnique({ where: { id: groupId } });
   if (!group) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
-  }
-
-  const isMember = group.ownerId === session.user.id ||
-    !!(await prisma.groupMember.findUnique({
-      where: { userId_groupId: { userId: session.user.id, groupId } },
-    }));
-
-  if (!isMember && session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "You are not a member of this group" }, { status: 403 });
   }
 
   const url = await saveImage(file);

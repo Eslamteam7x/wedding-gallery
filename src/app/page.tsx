@@ -80,6 +80,8 @@ export default function Home() {
     setSelectedGroup(group);
   }, []);
 
+  const isAdmin = session?.user?.role === "ADMIN";
+
   const filteredImages = currentGroupId
     ? images.filter((img) => img.groupId === currentGroupId)
     : images;
@@ -100,7 +102,7 @@ export default function Home() {
       <main className="min-h-screen bg-black text-white">
         <Header />
         <Hero />
-        <Gallery images={images} onDeleteImage={handleDeleteImage} />
+        <Gallery images={images} onDeleteImage={handleDeleteImage} isAdmin={false} />
         <Footer />
       </main>
     );
@@ -111,25 +113,35 @@ export default function Home() {
       <Header />
       <Hero />
 
-      <div className="max-w-7xl mx-auto px-6 flex gap-8">
-        <aside className="hidden lg:block w-64 shrink-0">
-          <div className="sticky top-24">
-            <GroupManager
-              onSelectGroup={handleSelectGroup}
-              selectedGroupId={currentGroupId}
-            />
+      {isAdmin && (
+        <div className="max-w-7xl mx-auto px-6 flex gap-8">
+          <aside className="hidden lg:block w-64 shrink-0">
+            <div className="sticky top-24">
+              <GroupManager
+                onSelectGroup={handleSelectGroup}
+                selectedGroupId={currentGroupId}
+              />
+            </div>
+          </aside>
+
+          <div className="flex-1 min-w-0">
+            <Gallery images={filteredImages} onDeleteImage={handleDeleteImage} isAdmin={isAdmin} />
           </div>
-        </aside>
-
-        <div className="flex-1 min-w-0">
-          <Gallery images={filteredImages} onDeleteImage={handleDeleteImage} />
         </div>
-      </div>
+      )}
 
-      <UploadZone
-        groups={groups.map((g) => ({ id: g.id, name: g.name }))}
-        selectedGroupId={currentGroupId}
-      />
+      {!isAdmin && (
+        <div className="max-w-7xl mx-auto px-6">
+          <Gallery images={filteredImages} onDeleteImage={handleDeleteImage} isAdmin={isAdmin} />
+        </div>
+      )}
+
+      {isAdmin && (
+        <UploadZone
+          groups={groups.map((g) => ({ id: g.id, name: g.name }))}
+          selectedGroupId={currentGroupId}
+        />
+      )}
 
       <Footer />
     </main>
