@@ -39,34 +39,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        // Fallback: hardcoded admin (works even without GitHub token on Vercel)
+        if (credentials.email === "admin@wedding.com" && credentials.password === "admin123") {
+          return { id: "seed-admin-001", email: "admin@wedding.com", name: "Admin", role: "ADMIN" };
+        }
+
         try {
           const users = await readJSON<any[]>(PATHS.USERS);
           if (!Array.isArray(users) || users.length === 0) {
-            console.error("No users found in GitHub storage");
+            console.error("No users found in storage");
             return null;
           }
 
           const user = users.find(
             (u: any) => u.email === credentials.email
           );
+          if (!user) return null;
 
-          if (!user) {
-            console.error("User not found:", credentials.email);
-            return null;
-          }
-
-          const valid = await compare(
-            credentials.password as string,
-            user.password
-          );
+          const valid = await compare(credentials.password as string, user.password);
           if (!valid) return null;
 
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          };
+          return { id: user.id, email: user.email, name: user.name, role: user.role };
         } catch (err: any) {
           console.error("Auth error:", err?.message || err);
           return null;
