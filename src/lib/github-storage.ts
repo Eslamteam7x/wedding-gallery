@@ -1,5 +1,5 @@
-import { readFile } from "fs/promises";
-import { join } from "path";
+import { readFile, writeFile, mkdir } from "fs/promises";
+import { join, dirname } from "path";
 
 const GITHUB_TOKEN = () => process.env.GITHUB_TOKEN || "";
 const GITHUB_OWNER = () => process.env.GITHUB_OWNER || "Eslamteam7x";
@@ -74,16 +74,19 @@ async function deleteFile(path: string, sha: string, message?: string) {
   if (!res.ok) throw new Error(`GitHub API error (DELETE): ${res.status}`);
 }
 
-function localPath(path: string) {
-  return join(process.cwd(), path);
-}
-
 async function readLocalJSON<T>(path: string): Promise<T | null> {
+  const relative = path.replace("data/", "");
+  const localPath = join(getDataDir(), relative);
   try {
-    const content = await readFile(localPath(path), "utf-8");
+    const content = await readFile(localPath, "utf-8");
     return JSON.parse(content) as T;
   } catch {
-    return null;
+    try {
+      const content = await readFile(join(process.cwd(), path), "utf-8");
+      return JSON.parse(content) as T;
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -97,6 +100,22 @@ export async function readJSON<T = any>(path: string): Promise<T> {
   return (typeof [] as any) === "object" ? ([] as T) : ({} as T);
 }
 
+function getDataDir() {
+  return process.env.VERCEL ? "/tmp/data" : join(process.cwd(), "data");
+}
+
+async function writeLocalJSON(path: string, data: any): Promise<boolean> {
+  try {
+    const fullPath = join(getDataDir(), path.replace("data/", ""));
+    await mkdir(dirname(fullPath), { recursive: true });
+    await writeFile(fullPath, JSON.stringify(data, null, 2), "utf-8");
+    return true;
+  } catch (err) {
+    console.error("Local write fallback error:", err);
+    return false;
+  }
+}
+
 export async function writeJSON(path: string, data: any): Promise<boolean> {
   const serialized = JSON.stringify(data, null, 2);
   try {
@@ -108,8 +127,8 @@ export async function writeJSON(path: string, data: any): Promise<boolean> {
     }
     return true;
   } catch (err) {
-    console.error("GitHub storage: writeJSON error", err);
-    return false;
+    console.error("GitHub write failed, trying local fallback:", err);
+    return writeLocalJSON(path, data);
   }
 }
 
