@@ -24,7 +24,10 @@ declare module "@auth/core/jwt" {
   }
 }
 
+const FALLBACK_SECRET = "15994605005b6a5c68b265854f5d2936734c171adf03552ac6ae4d9bd62dc81a";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET || FALLBACK_SECRET,
   trustHost: true,
   providers: [
     Credentials({
